@@ -9,8 +9,7 @@ async function main() {
   console.log(`A contract with balance of ${initBalance} eth deployed to ${assessment.address}`);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+// This pattern is able to use async/await everywhere and also handle error properly
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
