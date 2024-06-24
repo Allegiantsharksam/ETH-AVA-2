@@ -1,16 +1,82 @@
-const hre = require("hardhat");
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import atm_abi from  "../artifacts/contract/Assessment.sol/Assessment.json";
 
-async function main() {
-  const initBalance = 1;
-  const Assessment = await hre.ethers.getContractFactory("Assessment");
-  const assessment = await Assessment.deploy(initBalance);
-  await assessment.deployed();
+export default function HomePage() {
+  const [ethWallet, setEthWallet] = useState(undefined);
+  const [account, setAccount] = useState(undefined);
+  const [atm, setATM] = useState(undefined);
+  const [balance, setBalance] = useState(undefined);
 
-  console.log(`A contract with balance of ${initBalance} eth deployed to ${assessment.address}`);
+  const contractAddress = "0x1b5c0f84b6d120a38dfed402292654ef16462910"; ////
+  const atmABI = atm_abi.abi;
+
+  useEffect(() => {
+    const getWallet = async () => {
+      if (window.ethereum) {
+        setEthWallet(window.ethereum);
+        const account = await window.ethereum.request({ method: "eth_accounts" });
+        if (account.length) setAccount(account[0]);
+      }
+    };
+
+    getWallet();
+  }, []);
+
+  useEffect(() => {
+    if (ethWallet && account) {
+      const provider = new ethers.providers.Web3Provider(ethWallet);
+      const signer = provider.getSigner();
+      setATM(new ethers.Contract(contractAddress, atmABI, signer));
+    }
+  }, [ethWallet, account]);
+
+  const connectAccount = async () => {
+    if (!ethWallet) {
+      alert('MetaMask wallet is required to connect');
+      return;
+    }
+
+    const accounts = await ethWallet.request({ method: 'eth_requestAccounts' });
+    if (accounts.length) setAccount(accounts[0]);
+  };
+
+  const getBalance = async () => {
+    if (atm) setBalance((await atm.getBalance()).toNumber());
+  };
+
+  useEffect(() => {
+    if (atm) getBalance();
+  }, [atm]);
+
+  const handleTransaction = async (action) => {
+    if (atm) {
+      const tx = await atm ;
+      await tx.wait();
+      getBalance();
+    }
+  };
+
+  return (
+    <main className="container">
+      <header><h1>Welcome to the Metacrafters ATM!</h1></header>
+      {!ethWallet ? (
+        <p>Please install Metamask in order to use this ATM.</p>
+      ) : !account ? (
+        <button onClick={connectAccount}>Please connect your Metamask wallet</button>
+      ) : (
+        <div>
+          <p>Your Account: {account}</p>
+          <p>Your Balance: {balance}</p>
+          <button onClick={() => handleTransaction("deposit")}>Deposit 1 ETH</button>
+          <button onClick={() => handleTransaction("withdraw")}>Withdraw 1 ETH</button>
+        </div>
+      )}
+      <style jsx>{`
+        .container {
+          text-align: center;
+        }
+      `}</style>
+    </main>
+  );
 }
-
-// This pattern is able to use async/await everywhere and also handle error properly
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
